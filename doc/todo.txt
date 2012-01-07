@@ -1,0 +1,5 @@
+*) handle BufWipeout
+   TEST IT FIRST! in the docs said that:
+   1) <afile> may be different from '%'
+   2) it also calls when buffer is being renamed.
+
