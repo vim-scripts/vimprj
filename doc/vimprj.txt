@@ -37,6 +37,9 @@ your project new directory ".vimprj" and put any number of files "*.vim" in it.
 Every time you open new file in Vim, plugin looks for ".vimprj" directory up
 by tree, and if it is found, then all *.vim files from it will be sourced.
 
+OR: you can just put file ".vimprj", then this file will be sourced.
+Name ".vimprj" can be changed by editing option g:vimprj_dirNameForSearch .
+
 Usually for my own projects i create just one file .vimprj/my.vim with the
 following contents: >
 
@@ -44,7 +47,10 @@ following contents: >
    let &shiftwidth = 3
    set expandtab
 
-and for other projects i create file with appropriate options.
+This my .vimprj directory also contain tags and other project-specific files,
+so, i'd prefer to use directory instead of just one file.
+
+and for other projects i create files with appropriate options.
 
 Now, when i open file from my project, file my.vim is sourced. When i open
 file from some another project, its own file with options is sourced too. Of

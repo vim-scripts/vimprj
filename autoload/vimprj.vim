@@ -7,7 +7,7 @@ endif
 
 
 
-let g:vimprj#version           = 102
+let g:vimprj#version           = 103
 let g:vimprj#loaded            = 1
 
 let s:boolInitialized          = 0
@@ -204,7 +204,7 @@ function! <SID>ParseNewVimprjRoot(sProjectRoot, dParams)
 
       " if dir .vimprj exists, and if this vimprj_root has not been parsed yet 
 
-      if isdirectory(l:sVimprjDirName)
+      if isdirectory(l:sVimprjDirName) || filereadable(l:sVimprjDirName)
          let l:sVimprjKey = <SID>GetKeyFromPath(a:sProjectRoot)
          if !has_key(g:vimprj#dRoots, l:sVimprjKey)
 
@@ -385,14 +385,19 @@ function! <SID>SourceVimprjFiles(sPath)
    
    call <SID>ExecHooks('SetDefaultOptions', {'sVimprjDirName' : a:sPath})
 
-   if (!empty(a:sPath))
-      " sourcing all *vim files in .vimprj dir
+   if isdirectory(a:sPath)
 
+      " sourcing all *vim files in .vimprj dir
       let l:lSourceFilesList = split(glob(a:sPath.'/*vim'), '\n')
       let l:sThisFile = expand('%:p')
       for l:sFile in l:lSourceFilesList
          exec 'source '.l:sFile
       endfor
+
+   elseif filereadable(a:sPath)
+
+      " sourcing just one specified file
+      exec 'source '.a:sPath
 
    endif
 endfunction
@@ -419,16 +424,19 @@ endfunction
 function! <SID>GetVimprjRootOfFile(iFileNum)
 
    let l:sFilename = <SID>BufName(a:iFileNum) "expand('<afile>:p:h')
-   let l:sFilename = <SID>_GetPathHeader(l:sFilename)
+   let l:sDirname = <SID>_GetPathHeader(l:sFilename)
 
    let l:i = 0
    let l:sCurPath = ''
    let l:sProjectRoot = ''
    while (l:i < g:vimprj_recurseUpCount)
-      let l:sTmp = simplify(l:sFilename.l:sCurPath.'/'.g:vimprj_dirNameForSearch)
-      if (isdirectory(l:sTmp))
-         let l:sProjectRoot = simplify(l:sFilename.l:sCurPath)
+      let l:sTmp = simplify(l:sDirname.l:sCurPath.'/'.g:vimprj_dirNameForSearch)
+      if isdirectory(l:sTmp) || filereadable(l:sTmp)
+
+         " directory or file with needed name found
+         let l:sProjectRoot = simplify(l:sDirname.l:sCurPath)
          break
+
       endif
       let l:sCurPath = l:sCurPath.'/..'
       let l:i = l:i + 1
@@ -436,23 +444,18 @@ function! <SID>GetVimprjRootOfFile(iFileNum)
 
    if !empty(l:sProjectRoot)
 
-      " .vimprj directory is found.
-      " проверяем, не открыли ли мы файл из директории .vimprj
+      " .vimprj directory or file is found.
+      " проверяем, не открыли ли мы файл из директории .vimprj (или, если это
+      " файл, то не открыли ли мы этот файл)
 
       let l:sPathToDirNameForSearch = l:sProjectRoot.'/'.g:vimprj_dirNameForSearch
       let l:iPathToDNFSlen = strlen(l:sPathToDirNameForSearch)
 
-      "if (strpart(l:sFilename, 0, l:iPathToDNFSlen) != l:sPathToDirNameForSearch)
-         "" нет, открытый файл - не из директории .vimprj, так что применяем
-         "" для него настройки из этой директории .vimprj
-         ""let l:sVimprjKey = <SID>GetKeyFromPath(l:sProjectRoot)
-      "endif
-
-      if (strpart(l:sFilename, 0, l:iPathToDNFSlen) == l:sPathToDirNameForSearch)
-         " открытый файл - из директории .vimprj, так что для него
+      if strpart(l:sFilename, 0, l:iPathToDNFSlen) == l:sPathToDirNameForSearch " открытый файл - из директории .vimprj, так что для него
          " НЕ будем применять настройки из этой директории.
          let l:sProjectRoot = ''
       endif
+
    endif
 
    if !empty(l:sProjectRoot)
