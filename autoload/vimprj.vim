@@ -7,35 +7,33 @@ endif
 
 
 
-let g:vimprj#version           = 103
+let g:vimprj#version           = 105
 let g:vimprj#loaded            = 1
 
 let s:boolInitialized          = 0
-let s:bool_OnFileOpen_executed = 0
 
 
 " ************************************************************************************************
 "                                          PUBLIC FUNCTIONS
 " ************************************************************************************************
 
+function! vimprj#info()
+   let l:sProjectRoot = g:vimprj#dRoots[ g:vimprj#sCurVimprjKey ].proj_root
+   echo '* Project root: '
+            \  .(l:sProjectRoot != '' ? l:sProjectRoot : 'not found')
+            \  .'  (Project root is a directory which contains "'
+            \  .g:vimprj_dirNameForSearch.'" directory or file)'
+endfunction
 
 " applies all settings from .vimprj dir
 function! vimprj#applyVimprjSettings(sVimprjKey)
 
    call <SID>_AddToDebugLog(s:DEB_LEVEL__ALL, 'function start: __ApplyVimprjSettings__', {'sVimprjKey' : a:sVimprjKey})
-
-
-   " TODO
-   "if (!empty(s:indexer_defaultSettingsFilename))
-   "    exec 'source '.s:indexer_defaultSettingsFilename
-   "endif
+   "call confirm ("vimprj#applyVimprjSettings ".a:sVimprjKey)
 
    call <SID>SourceVimprjFiles(g:vimprj#dRoots[ a:sVimprjKey ]["path"])
    call <SID>ChangeDirToVimprj(g:vimprj#dRoots[ a:sVimprjKey ]["cd_path"])
 
-
-   "let l:sTmp .= "===".&ts
-   "let l:tmp2 = input(l:sTmp)
    " для каждого проекта, в который входит файл, добавляем tags и path
 
    call <SID>_AddToDebugLog(s:DEB_LEVEL__ALL, 'function end: __ApplyVimprjSettings__', {})
@@ -95,7 +93,7 @@ function! vimprj#init()
       autocmd! Vimprj_LoadFile BufReadPost
       autocmd! Vimprj_LoadFile BufNewFile
       autocmd Vimprj_LoadFile BufReadPost * call <SID>OnFileOpen(bufnr(expand('<afile>')))
-      autocmd Vimprj_LoadFile BufNewFile * call <SID>OnFileOpen(bufnr(expand('<afile>')))
+      autocmd Vimprj_LoadFile BufNewFile *  call <SID>OnFileOpen(bufnr(expand('<afile>')))
    augroup END
 
    " указываем обработчик входа в другой буфер: OnBufEnter
@@ -184,45 +182,28 @@ endfunction
 " Добавляет новый vimprj_root
 "
 " @param sProjectRoot path to proj dir
-" @param dParams dictionary with params:
-"     'boolSwitchBackToCurVimprj' : if 1, then after parsing will be executed
-"        vimprj#applyVimprjSettings for current project
-"        (this is necessary option, no default value)
 "
-function! <SID>ParseNewVimprjRoot(sProjectRoot, dParams)
+function! <SID>ParseNewVimprjRoot(sProjectRoot)
 
-   " set default params
-   let l:dParams = <SID>SetDefaultValues(a:dParams, {
-            \     'boolSwitchBackToCurVimprj' : -1,
-            \  })
+   let l:sVimprjDirName = a:sProjectRoot.'/'.g:vimprj_dirNameForSearch
 
-   if l:dParams['boolSwitchBackToCurVimprj'] == -1
-      echoerr "<SID>ParseNewVimprjRoot error: you need to specify option 'boolSwitchBackToCurVimprj'"
-   else
+   " if dir .vimprj exists, and if this vimprj_root has not been parsed yet 
 
-      let l:sVimprjDirName = a:sProjectRoot.'/'.g:vimprj_dirNameForSearch
-
-      " if dir .vimprj exists, and if this vimprj_root has not been parsed yet 
-
-      if isdirectory(l:sVimprjDirName) || filereadable(l:sVimprjDirName)
-         let l:sVimprjKey = <SID>GetKeyFromPath(a:sProjectRoot)
-         if !has_key(g:vimprj#dRoots, l:sVimprjKey)
+   if isdirectory(l:sVimprjDirName) || filereadable(l:sVimprjDirName)
+      let l:sVimprjKey = <SID>GetKeyFromPath(a:sProjectRoot)
+      if !has_key(g:vimprj#dRoots, l:sVimprjKey)
 
 
-            call <SID>SourceVimprjFiles(l:sVimprjDirName)
-            call <SID>ChangeDirToVimprj(substitute(a:sProjectRoot, ' ', '\\ ', 'g'))
+         call <SID>SourceVimprjFiles(l:sVimprjDirName)
+         call <SID>ChangeDirToVimprj(substitute(a:sProjectRoot, ' ', '\\ ', 'g'))
 
-            call <SID>AddNewVimprjRoot(l:sVimprjKey, a:sProjectRoot, a:sProjectRoot)
+         call <SID>AddNewVimprjRoot(l:sVimprjKey, a:sProjectRoot, a:sProjectRoot)
 
 
-            if l:dParams['boolSwitchBackToCurVimprj']
-               call vimprj#applyVimprjSettings(g:vimprj#sCurVimprjKey)
-            endif
-         endif
-      else
-         echoerr "<SID>ParseNewVimprjRoot error: there's no ".g:vimprj_dirNameForSearch
-                  \  ." dir in the project dir '".a:sProjectRoot."'"
       endif
+   else
+      echoerr "<SID>ParseNewVimprjRoot error: there's no ".g:vimprj_dirNameForSearch
+               \  ." dir in the project dir '".a:sProjectRoot."'"
    endif
 
 endfunction
@@ -350,11 +331,19 @@ endfunction
 " for it)
 function! <SID>NeedSkipBuffer(iFileNum)
 
-   " file should be readable
-   if !filereadable(bufname(a:iFileNum))
+   " COMMENTED!! file should be readable 
+   " commented because of we should parse creation of new files,
+   " which isn't readable at BufNewFile.
+   "
+   "if !filereadable(bufname(a:iFileNum))
+      "return 1
+   "endif
+
+   " skip directories
+   if isdirectory(bufname(a:iFileNum))
       return 1
    endif
-
+   
    " &buftype should be empty for regular files
    if !empty(getbufvar(a:iFileNum, "&buftype"))
       return 1
@@ -475,6 +464,8 @@ function! <SID>OnFileOpen(iFileNum)
 
    let l:iFileNum = a:iFileNum "bufnr(expand('<afile>'))
 
+   "call confirm("OnFileOpen " . a:iFileNum . " " . bufname(a:iFileNum))
+
 
    call <SID>CreateDefaultProjectIfNotAlready()
 
@@ -484,7 +475,6 @@ function! <SID>OnFileOpen(iFileNum)
 
    call <SID>_AddToDebugLog(s:DEB_LEVEL__PARSE, 'function start: __OnFileOpen__', {'filename' : expand('%')})
 
-   let s:bool_OnFileOpen_executed = 1
 
    "let l:sTmp = input("OnNewFileOpened_".getbufvar('%', "&buftype"))
 
@@ -496,6 +486,13 @@ function! <SID>OnFileOpen(iFileNum)
 
    let l:sVimprjKey   = l:dTmp['sVimprjKey']
    let l:sProjectRoot = l:dTmp['sProjectRoot']
+
+   " if file account is already taken, we should anyway parse it again,
+   " because it happens at least at :saveas new_filename
+
+   "if <SID>IsFileAccountTaken(l:iFileNum)
+      "call confirm('file account is already taken '.<SID>BufName(l:iFileNum))
+   "endif
 
    unlet l:dTmp
 
@@ -511,14 +508,8 @@ function! <SID>OnFileOpen(iFileNum)
       " l:sProjectRoot can NEVER be empty here,
       " because it is empty only for 'default' sVimprjKey,
       " and this sVimprjKey is added when vim starts.
-      call <SID>ParseNewVimprjRoot(l:sProjectRoot, {
-               \     'boolSwitchBackToCurVimprj' : 0,
-               \  })
+      call <SID>ParseNewVimprjRoot(l:sProjectRoot)
 
-      "call <SID>SourceVimprjFiles(l:sProjectRoot.'/'.g:vimprj_dirNameForSearch)
-      "call <SID>ChangeDirToVimprj(substitute(l:sProjectRoot, ' ', '\\ ', 'g'))
-
-      "call <SID>AddNewVimprjRoot(l:sVimprjKey, l:sProjectRoot, l:sProjectRoot)
    else
       " .vimprj project is known.
       " if it is inactive - applying settings from it.
@@ -542,7 +533,20 @@ function! <SID>OnFileOpen(iFileNum)
    else
       " need to switch back to %
       " (at least, it happens when ":w new_filename" at any NAMED file)
+
+      "echoerr "returning to buffer ".bufname('%')." from ".bufname(l:iFileNum)
+
       call <SID>OnBufEnter(bufnr('%'))
+
+
+
+      "if <SID>IsFileAccountTaken(bufnr('%'))
+         "call <SID>OnBufEnter(bufnr('%'))
+      "else
+         "" for some reason (i dunno) it happens when from default project open
+         "" [BufExplorer].
+         "call <SID>OnFileOpen(bufnr('%'))
+      "endif
    endif
 
    call <SID>_AddToDebugLog(s:DEB_LEVEL__PARSE, 'function end: __OnFileOpen__', {})
@@ -551,6 +555,10 @@ endfunction
 " returns if buffer is changed (swithed) to another, or not
 function! <SID>IsBufSwitched()
    return (g:vimprj#iCurFileNum != bufnr('%'))
+endfunction
+
+function! <SID>IsFileAccountTaken(iFileNum)
+   return has_key(g:vimprj#dFiles, a:iFileNum)
 endfunction
 
 
@@ -563,17 +571,18 @@ function! <SID>OnBufEnter(iFileNum)
       return
    endif
 
+   "call confirm("OnBufEnter " . a:iFileNum . " " . bufname(a:iFileNum))
+
    call <SID>_AddToDebugLog(s:DEB_LEVEL__ALL, 'function start: __OnBufEnter__', {'filename' : expand('%')})
 
    if (!<SID>IsBufSwitched())
       return
    endif
 
-   if empty(s:bool_OnFileOpen_executed)
+   if !<SID>IsFileAccountTaken(l:iFileNum)
+      "echoerr "not taken account of ".bufname(l:iFileNum)
       call <SID>OnFileOpen(l:iFileNum)
    endif
-
-   "let l:sTmp = input("OnBufWinEnter_".getbufvar('%', "&buftype"))
 
    let l:sPrevVimprjKey = g:vimprj#sCurVimprjKey
    call <SID>SetCurrentFile(l:iFileNum)

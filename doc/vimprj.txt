@@ -14,8 +14,9 @@ to email me: dimon.frank@gmail.com
 
    Contents:
 
-         Options.....................|vimprj-options|
-         Known bugs.....................|vimprj-bugs|
+         Options.........................|vimprj-options|
+         Commands.......................|vimprj-commands|
+         Known bugs.........................|vimprj-bugs|
 
 
 Many times i faced a problem. That's the story:
@@ -143,7 +144,16 @@ g:vimprj_changeCurDirIfVimprjFound     (default: 1)
    If you don't like it, please let g:vimprj_changeCurDirIfVimprjFound = 0 .
 
 ========================================================================
+COMMANDS                                                *vimprj-commands*
+
+:VimprjInfo
+
+   Echoes current project root 
+   (project root is a directory which contains .vimprj directory or file)
+
+========================================================================
 KNOWN BUGS                                                  *vimprj-bugs*
 
 None.
 
+ vim:ft=help:tw=78:  
