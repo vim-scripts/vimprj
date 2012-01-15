@@ -5,9 +5,81 @@ if v:version < 700
    finish
 endif
 
+" Dependencies
+
+let s:iDfrankUtil_min_version = 100
+
+" Dependency functions
+
+function! <SID>GetVersionString(iVersion)
+   let l:iLen = strlen(a:iVersion)
+   return strpart(a:iVersion, 0, l:iLen - 2).'.'.strpart(a:iVersion, l:iLen - 2)
+endfunction
+
+function! <SID>CheckCompatibility(sCurPluginName, sDepPluginName, sDepPluginVerVar, iDepPluginNeededVer)
+   let l:iDepPluginCurVer = -1
+   let l:dRes = {'boolCompatible' : 0, 'msg' : ''}
+
+   if exists(a:sDepPluginVerVar)
+      exec ('let l:iDepPluginCurVer = '.a:sDepPluginVerVar)
+   endif
+
+   if l:iDepPluginCurVer < a:iDepPluginNeededVer
+      let l:dRes.boolCompatible = 0
+
+      if !exists('s:'.a:sCurPluginName.a:sDepPluginName.'_warning_shown')
+         let l:sMsg = a:sCurPluginName." error: you need for plugin '".a:sDepPluginName."' version ".<SID>GetVersionString(a:iDepPluginNeededVer)." to be installed, but "
+         if l:iDepPluginCurVer > 0
+            let l:sMsg .= "your current version of '".a:sDepPluginName."' is ".<SID>GetVersionString(l:iDepPluginCurVer)
+         else
+            let l:sMsg .= "you have not currently '".a:sDepPluginName."' installed."
+         endif
+         exec 'let s:'.a:sCurPluginName.a:sDepPluginName.'_warning_shown = 1'
+         let l:dRes.msg = l:sMsg
+      endif
+   else
+      let l:dRes.boolCompatible = 1
+      " versions are compatible
+   endif
+
+   return l:dRes
+
+endfunction
 
 
-let g:vimprj#version           = 105
+" CHECK DEPENDENCY: DfrankUtil
+
+try
+   call dfrank#util#init()
+catch
+   " no DfrankUtil plugin installed
+endtry
+
+let s:sDfrankUtilCompatibility = <SID>CheckCompatibility(
+         \     "Vimprj", 
+         \     "DfrankUtil", 
+         \     "g:dfrank#util#version", 
+         \     s:iDfrankUtil_min_version
+         \  )
+
+if !s:sDfrankUtilCompatibility.boolCompatible
+   if !empty(s:sDfrankUtilCompatibility.msg)
+      call confirm(s:sDfrankUtilCompatibility.msg)
+   endif
+   let s:boolNeedFinish = 1
+endif
+
+" -----
+
+
+if exists("s:boolNeedFinish")
+   finish
+endif
+
+
+" all dependencies is ok
+
+let g:vimprj#version           = 106
 let g:vimprj#loaded            = 1
 
 let s:boolInitialized          = 0
@@ -116,67 +188,6 @@ endfunction
 " ************************************************************************************************
 
 
-" <SID>IsAbsolutePath(path) <<<
-"   this function from project.vim is written by Aric Blumer.
-"   Returns true if filename has an absolute path.
-function! <SID>IsAbsolutePath(path)
-   if a:path =~ '^ftp:' || a:path =~ '^rcp:' || a:path =~ '^scp:' || a:path =~ '^http:'
-      return 2
-   endif
-   let path=expand(a:path) " Expand any environment variables that might be in the path
-   if path[0] == '/' || path[0] == '~' || path[0] == '\\' || path[1] == ':'
-      return 1
-   endif
-   return 0
-endfunction " >>>
-
-function! <SID>_GetPathHeader(sPath)
-   return substitute(a:sPath, '\v^(.*)[\\/]([^\\/]+)[\\/]{0,1}$', '\1', '')
-endfunction
-
-
-" acts like bufname({expr}), but always return absolute path
-function! <SID>BufName(mValue)
-   let l:sFilename = bufname(a:mValue)
-
-   " make absolute path
-   if !empty(l:sFilename) && !<SID>IsAbsolutePath(l:sFilename)
-      let l:sFilename = getcwd().'/'.l:sFilename
-   endif
-
-   " on Windows systems happens stupid things: bufname returns path without
-   " drive letter, e.g. something like that: "/path/to/file", but it should be
-   " "D:/path/to/file". So, we need to add drive letter manually.
-   if has('win32') || has('win64')
-      if strpart(l:sFilename, 0, 1) == '/' && strpart(getcwd(), 1, 1) == ':'
-         let l:sFilename = strpart(getcwd(), 0, 2).l:sFilename
-      endif
-   endif
-
-   " simplify
-   let l:sFilename = simplify(l:sFilename)
-
-   return l:sFilename
-endfunction
-
-
-function! <SID>SetDefaultValues(dParams, dDefParams)
-   let l:dParams = a:dParams
-
-   for l:sKey in keys(a:dDefParams)
-      if (!has_key(l:dParams, l:sKey))
-         let l:dParams[ l:sKey ] = a:dDefParams[ l:sKey ]
-      else
-         if type(l:dParams[ l:sKey ]) == type({}) && type(a:dDefParams[ l:sKey ]) == type({})
-            let l:dParams[ l:sKey ] = <SID>SetDefaultValues(l:dParams[ l:sKey ], a:dDefParams[ l:sKey ])
-         endif
-      endif
-   endfor
-
-   return l:dParams
-endfunction
-
-
 
 " Парсит директорию проекта (директорию, в которой лежит директория .vimprj)
 " Добавляет новый vimprj_root
@@ -190,7 +201,7 @@ function! <SID>ParseNewVimprjRoot(sProjectRoot)
    " if dir .vimprj exists, and if this vimprj_root has not been parsed yet 
 
    if isdirectory(l:sVimprjDirName) || filereadable(l:sVimprjDirName)
-      let l:sVimprjKey = <SID>GetKeyFromPath(a:sProjectRoot)
+      let l:sVimprjKey = dfrank#util#GetKeyFromPath(a:sProjectRoot)
       if !has_key(g:vimprj#dRoots, l:sVimprjKey)
 
 
@@ -225,7 +236,7 @@ function! <SID>TakeAccountOfFile(iFileNum, sVimprjKey)
    endif
 
    if a:iFileNum > 0
-      let l:sFilename = <SID>BufName(a:iFileNum)
+      let l:sFilename = dfrank#util#BufName(a:iFileNum)
    else
       let l:sFilename = ""
    endif
@@ -400,20 +411,10 @@ function! <SID>ChangeDirToVimprj(sPath)
    endif
 endfunction
 
-function! <SID>GetKeyFromPath(sPath)
-   let l:sKey = substitute(a:sPath, '[^a-zA-Z0-9_]', '_', 'g')
-
-   if has('win32') || has('win64')
-      let l:sKey = tolower(l:sKey)
-   endif
-
-   return l:sKey
-endfunction
-
 function! <SID>GetVimprjRootOfFile(iFileNum)
 
-   let l:sFilename = <SID>BufName(a:iFileNum) "expand('<afile>:p:h')
-   let l:sDirname = <SID>_GetPathHeader(l:sFilename)
+   let l:sFilename = dfrank#util#BufName(a:iFileNum) "expand('<afile>:p:h')
+   let l:sDirname = dfrank#util#GetPathHeader(l:sFilename)
 
    let l:i = 0
    let l:sCurPath = ''
@@ -438,9 +439,11 @@ function! <SID>GetVimprjRootOfFile(iFileNum)
       " файл, то не открыли ли мы этот файл)
 
       let l:sPathToDirNameForSearch = l:sProjectRoot.'/'.g:vimprj_dirNameForSearch
-      let l:iPathToDNFSlen = strlen(l:sPathToDirNameForSearch)
+      "let l:iPathToDNFSlen = strlen(l:sPathToDirNameForSearch)
 
-      if strpart(l:sFilename, 0, l:iPathToDNFSlen) == l:sPathToDirNameForSearch " открытый файл - из директории .vimprj, так что для него
+      "if strpart(l:sFilename, 0, l:iPathToDNFSlen) == l:sPathToDirNameForSearch " открытый файл - из директории .vimprj, так что для него
+
+      if dfrank#util#IsFileInSubdir(l:sFilename, l:sPathToDirNameForSearch)
          " НЕ будем применять настройки из этой директории.
          let l:sProjectRoot = ''
       endif
@@ -448,7 +451,7 @@ function! <SID>GetVimprjRootOfFile(iFileNum)
    endif
 
    if !empty(l:sProjectRoot)
-      let l:sVimprjKey = <SID>GetKeyFromPath(l:sProjectRoot)
+      let l:sVimprjKey = dfrank#util#GetKeyFromPath(l:sProjectRoot)
    else
       let l:sVimprjKey = "default"
    endif
@@ -491,7 +494,7 @@ function! <SID>OnFileOpen(iFileNum)
    " because it happens at least at :saveas new_filename
 
    "if <SID>IsFileAccountTaken(l:iFileNum)
-      "call confirm('file account is already taken '.<SID>BufName(l:iFileNum))
+      "call confirm('file account is already taken '.dfrank#util#BufName(l:iFileNum))
    "endif
 
    unlet l:dTmp
@@ -611,11 +614,11 @@ function! <SID>OnBufSave()
       call <SID>OnFileOpen(l:iFileNum)
    else
 
-      if g:vimprj#dFiles[ l:iFileNum ]['sFilename'] != <SID>BufName(l:iFileNum)
+      if g:vimprj#dFiles[ l:iFileNum ]['sFilename'] != dfrank#util#BufName(l:iFileNum)
          " file is just renamed/moved
          " (like ":saveas new_filename")
 
-         "call confirm('renamed. previous="'.g:vimprj#dFiles[ l:iFileNum ]['sFilename'].'" current="'.<SID>BufName(l:iFileNum).'"')
+         "call confirm('renamed. previous="'.g:vimprj#dFiles[ l:iFileNum ]['sFilename'].'" current="'.dfrank#util#BufName(l:iFileNum).'"')
          call <SID>OnFileOpen(l:iFileNum)
 
       else

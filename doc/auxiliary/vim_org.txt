@@ -1,0 +1,104 @@
+Please note: there's dependency DfrankUtil (vimscript #3884)
+
+                                  * * *
+
+Many times i faced a problem. That's the story:
+
+I'd like to use 3-space indent in my projects.
+No tabs, especially three spaces. One day i need to work on another project
+written by someone else, and there's 4 spaces indent. Or maybe tabs.
+
+I need to work on this project too, and i need to leave existing formatting
+options.
+
+I strongly dislike that i have to switch these options by hand: &shiftwidth,
+&tabstop, &expandtab.
+
+And then i decided to write this plugin to make my life easier.
+
+Using this plugin is quite easy. You need to create in the root directory of
+your project new directory ".vimprj" and put any number of files "*.vim" in it.
+Every time you open new file in Vim, plugin looks for ".vimprj" directory up
+by tree, and if it is found, then all *.vim files from it will be sourced.
+
+OR: you can just put file ".vimprj", then this file will be sourced.
+Name ".vimprj" can be changed by editing option g:vimprj_dirNameForSearch .
+
+Usually for my own projects i create just one file .vimprj/my.vim with the
+following contents: >
+
+   let &tabstop = 3
+   let &shiftwidth = 3
+   set expandtab
+
+(my .vimprj directory also contain tags and other project-specific files,
+so, i'd prefer to use directory instead of just one file.)
+
+and for other projects i create file with appropriate options.
+
+Now, when i open file from my project, file my.vim is sourced. When i open
+file from some another project, its own file with options is sourced too. Of
+course, when i switch buffer, this files are sourced too if project is
+changed.
+
+So, i always have correct options, and simultaneus work on several projects
+with different formatting options is not painful anymore for me.
+
+And, of course, you can use it not only to manage formatting options. For
+instance, in some my projects i use mapping <F9> to open project window 
+(from plugin project.tar.gz), but for some java projects i use Eclim, and <F9>
+should be mapped to another command (to open Eclim's project). 
+All these options can also be stated in .vimprj dir.
+
+There is an issue: as i already said, i would like to use shiftwidth=3. Say,
+i open some file from my project with shiftwidth=3. All ok here. Then i open
+file from another project with shiftwidth=4. All is still ok. Then i open some
+file not from any project (there's no ".vimprj" directory). Of course, i would
+like to use my favorite options (e.g. shiftwidth=3), but now shiftwidth is 4,
+because it was changed when i opened last project. It leads us to the fact
+that we should define default options. But here let me make a digression.
+
+Plugin provides some hooks for any other plugin. For instance, plugin 
+Indexer (since version 4.0) uses these hooks to provide correct behavior 
+when user works on different project simultaneusly.
+
+Right now i have not documented yet all these hooks, because of lack of 
+free time, but i just tell you about one hook, to let you specify your
+default options.
+
+This is a hook "SetDefaultOptions". Now i show you an example. Please insert
+in your .vimrc the following, just specify your own default options instead of
+mine ones: >
+
+   function! <SID>SetMainDefaults()
+
+      " your default options goes here!
+      set tabstop=3
+      set shiftwidth=3
+      set expandtab
+
+   endfunction
+
+   call <SID>SetMainDefaults()
+
+   " initialize vimprj plugin
+   call vimprj#init()
+
+   " define a hook
+   function! g:vimprj#dHooks['SetDefaultOptions']['main_options'](dParams)
+      call <SID>SetMainDefaults()
+   endfunction
+
+Now vimprj plugin will call your function SetMainDefaults just before sourcing
+all *.vim files from .vimprj directory, and when you open file not from any
+project.
+
+If you are interesting about another hooks, you can just look how is they used
+in Indexer plugin (since version 4.0). I hope one day i will write all this here. =)
+
+Please NOTE: by default this plugin will change your current dir
+to project's dir if ".vimprj" is found.
+More detailed read in help: type  :help vimprj-options , look for an option
+g:vimprj_changeCurDirIfVimprjFound
+
+Development repository (Mercurial) : http://hg.dfrank.ru/vim/bundle/vimprj

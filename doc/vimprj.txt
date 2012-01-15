@@ -14,10 +14,15 @@ to email me: dimon.frank@gmail.com
 
    Contents:
 
+         Dependencies...............|vimprj-dependencies|
          Options.........................|vimprj-options|
          Commands.......................|vimprj-commands|
          Known bugs.........................|vimprj-bugs|
 
+
+Please note: there's some dependencies. Please read |vimprj-dependencies|.
+
+                                  * * *
 
 Many times i faced a problem. That's the story:
 
@@ -113,6 +118,13 @@ project.
 If you are interesting about another hooks, you can just look how is they used
 in Indexer plugin. I hope one day i will write all this here. =)
 
+
+========================================================================
+DEPENDENCIES                                        *vimprj-dependencies*
+
+You need to download the following scripts to work with this plugin:
+
+DfrankUtil     ( http://www.vim.org/scripts/script.php?script_id=3884 )
 
 ========================================================================
 OPTIONS                                                  *vimprj-options*
