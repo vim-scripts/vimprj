@@ -1,3 +1,0 @@
-
-*) Refactor. Added new dependency: script-library DfrankUtil (vimscript #3884)
-
