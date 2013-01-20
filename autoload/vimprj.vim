@@ -6,6 +6,9 @@
 " *)  1.08 - 'default' project creation logic changed: now it is created just
 "            when opened some file not from any project, but in prev. versions
 "            it was created at Vim start
+" *)  1.09 - fixed issue: if quickfix window is opened, and user compiles
+"            current file (types :make ), then vimprj swithed to the 
+"            'default' settings.
 
 
 " g:vimprj#dRoots - DICTIONARY with info about $INDEXER_PROJECT_ROOTs
@@ -113,7 +116,7 @@ endif
 
 " all dependencies is ok
 
-let g:vimprj#version           = 108
+let g:vimprj#version           = 109
 let g:vimprj#loaded            = 1
 
 let s:boolInitialized          = 0
@@ -465,6 +468,16 @@ function! <SID>NeedSkipBuffer(iFileNum)
    "if !filereadable(bufname(a:iFileNum))
       "return 1
    "endif
+
+   " skip negative filenumbers 
+   " (I'm not sure why this happens, but:
+   "  If quickfix window is opened, and I call :mak , then <SID>OnFileOpen(-1)
+   "  is called.
+   "  So, I just added this check here.
+   " )
+   if a:iFileNum < 0
+      return 1
+   endif
 
    " skip directories
    if isdirectory(bufname(a:iFileNum))

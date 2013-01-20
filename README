@@ -3,16 +3,13 @@ This is a mirror of http://www.vim.org/scripts/script.php?script_id=3872
 Please note: there's dependency DfrankUtil (vimscript #3884)
 
                                   * * *
-Firstly I would recommend you to read nice article (at least vimprj part of it) by Francisco Lopes da Silva: http://goo.gl/vkCBc , there you can see well-explained example how to use this plugin effectively. Great thanks to Francisco. 
-
-                                  * * *
 Many times i faced a problem. That's the story:
 
 I'd like to use 3-space indent in my projects.
 No tabs, especially three spaces. One day i need to work on another project
 written by someone else, and there's 4 spaces indent. Or maybe tabs.
 
-I need to work on this project too, and i need to leave existing formatting
+I need to work on this project too, and i need to keep existing formatting
 options.
 
 I strongly dislike that i have to switch these options by hand: &shiftwidth,
