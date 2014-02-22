@@ -9,6 +9,7 @@
 " *)  1.09 - fixed issue: if quickfix window is opened, and user compiles
 "            current file (types :make ), then vimprj swithed to the 
 "            'default' settings.
+" *)  1.10 - fixed issue with spaces in paths (thanks to Alexey Shevchenko)
 
 
 " g:vimprj#dRoots - DICTIONARY with info about $INDEXER_PROJECT_ROOTs
@@ -116,7 +117,7 @@ endif
 
 " all dependencies is ok
 
-let g:vimprj#version           = 109
+let g:vimprj#version           = 110
 let g:vimprj#loaded            = 1
 
 let s:boolInitialized          = 0
@@ -190,6 +191,10 @@ function! vimprj#init()
 
    if !exists('g:vimprj_changeCurDirIfVimprjFound')
       let g:vimprj_changeCurDirIfVimprjFound = 1
+   endif
+
+   if !exists('g:vimprj_sourceScriptsOnlyIfVimprjChanged')
+      let g:vimprj_sourceScriptsOnlyIfVimprjChanged = 1
    endif
 
 
@@ -519,13 +524,13 @@ function! <SID>SourceVimprjFiles(sPath)
       let l:lSourceFilesList = split(glob(a:sPath.'/*vim'), '\n')
       let l:sThisFile = expand('%:p')
       for l:sFile in l:lSourceFilesList
-         exec 'source '.l:sFile
+         exec 'source '.escape(l:sFile, ' ')
       endfor
 
    elseif filereadable(a:sPath)
 
       " sourcing just one specified file
-      exec 'source '.a:sPath
+      exec 'source '.escape(a:sPath, ' ')
 
    endif
 endfunction
@@ -681,7 +686,7 @@ function! <SID>OnFileOpen(iFileNum)
    else
       " .vimprj project is known.
       " if it is inactive - applying settings from it.
-      if l:sVimprjKey != g:vimprj#sCurVimprjKey
+      if l:sVimprjKey != g:vimprj#sCurVimprjKey || !g:vimprj_sourceScriptsOnlyIfVimprjChanged
          call vimprj#applyVimprjSettings(l:sVimprjKey)
       endif
 
@@ -758,7 +763,7 @@ function! <SID>OnBufEnter(iFileNum)
    call <SID>SetCurrentFile(l:iFileNum)
 
    " applying vimprj settings if only vimprj root changed
-   if l:sPrevVimprjKey != g:vimprj#sCurVimprjKey
+   if l:sPrevVimprjKey != g:vimprj#sCurVimprjKey || !g:vimprj_sourceScriptsOnlyIfVimprjChanged
       call vimprj#applyVimprjSettings(g:vimprj#sCurVimprjKey)
    endif
 
