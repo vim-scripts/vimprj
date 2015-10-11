@@ -3,6 +3,10 @@ This is a mirror of http://www.vim.org/scripts/script.php?script_id=3872
 Please note: there's dependency DfrankUtil (vimscript #3884)
 
                                   * * *
+
+I've published a thorough article on Vimprj + Indexer usage; consider reading it: http://dmitryfrank.com/articles/vim_project_code_navigation
+
+                                  * * *
 Many times i faced a problem. That's the story:
 
 I'd like to use 3-space indent in my projects.

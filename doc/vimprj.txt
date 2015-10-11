@@ -4,10 +4,10 @@
 
 
                      By Dmitry Frank
-                  dimon.frank@gmail.com
+                   mail@dmitryfrank.com
 
 Firstly: if you have any questions regards this plugin, feel free
-to email me: dimon.frank@gmail.com
+to email me: mail@dmitryfrank.com
 
 
                                           *vimprj* *vimprj-plugin*
@@ -24,19 +24,19 @@ Please note: there's some dependencies. Please read |vimprj-dependencies|.
 
                                   * * *
 
-Many times i faced a problem. That's the story:
+Many times I faced a problem. That's the story:
 
 I'd like to use 3-space indent in my projects.
-No tabs, especially three spaces. One day i need to work on another project
+No tabs, especially three spaces. One day I need to work on another project
 written by someone else, and there's 4 spaces indent. Or maybe tabs.
 
-I need to work on this project too, and i need to leave existing formatting
+I need to work on this project too, and I need to leave existing formatting
 options.
 
-I strongly dislike that i have to switch these options by hand: &shiftwidth,
+I strongly dislike that I have to switch these options by hand: &shiftwidth,
 &tabstop, &expandtab.
 
-And then i decided to write this plugin to make my life easier.
+And then I decided to write this plugin to make my life easier.
 
 Using this plugin is quite easy. You need to create in the root directory of
 your project new directory ".vimprj" and put any number of files "*.vim" in it.
@@ -46,7 +46,7 @@ by tree, and if it is found, then all *.vim files from it will be sourced.
 OR: you can just put file ".vimprj", then this file will be sourced.
 Name ".vimprj" can be changed by editing option g:vimprj_dirNameForSearch .
 
-Usually for my own projects i create just one file .vimprj/my.vim with the
+Usually for my own projects I create just one file .vimprj/my.vim with the
 following contents: >
 
    let &tabstop = 3
@@ -54,41 +54,41 @@ following contents: >
    set expandtab
 
 This my .vimprj directory also contain tags and other project-specific files,
-so, i'd prefer to use directory instead of just one file.
+so, I'd prefer to use directory instead of just one file.
 
-and for other projects i create files with appropriate options.
+and for other projects I create files with appropriate options.
 
-Now, when i open file from my project, file my.vim is sourced. When i open
+Now, when I open file from my project, file my.vim is sourced. When I open
 file from some another project, its own file with options is sourced too. Of
-course, when i switch buffer, this files are sourced too if project is
+course, when I switch buffer, this files are sourced too if project is
 changed.
 
-So, i always have correct options, and simultaneus work on several projects
+So, I always have correct options, and simultaneus work on several projects
 with different formatting options is not painful anymore for me.
 
 And, of course, you can use it not only to manage formatting options. For
-instance, in some my projects i use mapping <F9> to open project window 
-(from plugin project.tar.gz), but for some java projects i use Eclim, and <F9>
+instance, in some my projects I use mapping <F9> to open project window 
+(from plugin project.tar.gz), but for some java projects I use Eclim, and <F9>
 should be mapped to another command (to open Eclim's project). 
 All these options can also be stated in .vimprj dir.
 
-There is an issue: as i already said, i would like to use shiftwidth=3. Say,
-i open some file from my project with shiftwidth=3. All ok here. Then i open
-file from another project with shiftwidth=4. All is still ok. Then i open some
-file not from any project (there's no ".vimprj" directory). Of course, i would
+There is an issue: as I already said, I would like to use shiftwidth=3. Say,
+I open some file from my project with shiftwidth=3. All ok here. Then I open
+file from another project with shiftwidth=4. All is still ok. Then I open some
+file not from any project (there's no ".vimprj" directory). Of course, I would
 like to use my favorite options (e.g. shiftwidth=3), but now shiftwidth is 4,
-because it was changed when i opened last project. It leads us to the fact
+because it was changed when I opened last project. It leads us to the fact
 that we should define default options. But here let me make a digression.
 
 Plugin provides some hooks for any other plugin. For instance, plugin 
 Indexer (since version 4.0) uses these hooks to provide correct behavior 
 when user works on different project simultaneusly.
 
-Right now i have not documented yet all these hooks, because of lack of 
-free time, but i just tell you about one hook, to let you specify your
+Right now I have not documented yet all these hooks, because of lack of 
+free time, but I just tell you about one hook, to let you specify your
 default options.
 
-This is a hook "SetDefaultOptions". Now i show you an example. Please insert
+This is a hook "SetDefaultOptions". Now I show you an example. Please insert
 in your .vimrc the following, just specify your own default options instead of
 mine ones: >
 
@@ -116,7 +116,7 @@ all *.vim files from .vimprj directory, and when you open file not from any
 project.
 
 If you are interesting about another hooks, you can just look how is they used
-in Indexer plugin. I hope one day i will write all this here. =)
+in Indexer plugin. I hope one day I will write all this here. =)
 
 
 ========================================================================
@@ -141,19 +141,17 @@ g:vimprj_dirNameForSearch              (default: '.vimprj')
 
    if you don't like name ".vimprj" for some reason, you can change it.
 
-g:vimprj_changeCurDirIfVimprjFound     (default: 1)
+g:vimprj_changeCurDirIfVimprjFound     (default: 0)
 
-   Plugin changes current directory to directory in which ".vimprj" is found,
-   unless you defined g:vimprj_changeCurDirIfVimprjFound = 0 .
+   If set, Vimprj changes current directory to directory in which ".vimprj" is
+   found.
 
-   I found it quite useful: when i work on some project, i always have
-   root of my project as current directory. It becomes changed when i switch
+   I found it quite useful: when I work on some project, I always have
+   root of my project as current directory. It becomes changed when I switch
    to buffer from another project.
 
-   If i open some file not from any project, then my current directory becomes
+   If I open some file not from any project, then my current directory becomes
    a directory from what Vim was started.
-
-   If you don't like it, please let g:vimprj_changeCurDirIfVimprjFound = 0 .
 
 ========================================================================
 COMMANDS                                                *vimprj-commands*

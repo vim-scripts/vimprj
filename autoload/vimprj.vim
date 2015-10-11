@@ -10,6 +10,11 @@
 "            current file (types :make ), then vimprj swithed to the 
 "            'default' settings.
 " *)  1.10 - fixed issue with spaces in paths (thanks to Alexey Shevchenko)
+" *)  1.11 - added $VIMPRJ_PROJECT_ROOT variable, which is set to the root of
+"            the currently active project.
+"          - default behavior changed: now, by default, Vimprj doesn't change
+"            your current working directory.
+"            Set g:vimprj_changeCurDirIfVimprjFound if you want it to do so.
 
 
 " g:vimprj#dRoots - DICTIONARY with info about $INDEXER_PROJECT_ROOTs
@@ -35,7 +40,7 @@
 "           [0, 1, 2, ...] - LIST KEY. At this moment, only 0 is available
 "              ["file"] - key for s:dProjFilesParsed
 "              ["name"] - name of project
-"           
+"
 
 
 if v:version < 700
@@ -117,7 +122,7 @@ endif
 
 " all dependencies is ok
 
-let g:vimprj#version           = 110
+let g:vimprj#version           = 111
 let g:vimprj#loaded            = 1
 
 let s:boolInitialized          = 0
@@ -158,8 +163,6 @@ function! vimprj#applyVimprjSettings(sVimprjKey)
 
    call <SID>ChangeDirToVimprj(g:vimprj#dRoots[ a:sVimprjKey ]["cd_path"])
 
-   " для каждого проекта, в который входит файл, добавляем tags и path
-
    call <SID>_AddToDebugLog(s:DEB_LEVEL__ALL, 'function end: __ApplyVimprjSettings__', {})
 endfunction
 
@@ -168,7 +171,6 @@ function! vimprj#getVimprjKeyOfFile(iFileNum)
 endfunction
 
 
-" задаем пустые массивы с данными
 function! vimprj#init()
    if s:boolInitialized
       return
@@ -190,7 +192,7 @@ function! vimprj#init()
    endif
 
    if !exists('g:vimprj_changeCurDirIfVimprjFound')
-      let g:vimprj_changeCurDirIfVimprjFound = 1
+      let g:vimprj_changeCurDirIfVimprjFound = 0
    endif
 
    if !exists('g:vimprj_sourceScriptsOnlyIfVimprjChanged')
@@ -198,7 +200,7 @@ function! vimprj#init()
    endif
 
 
-   " задаем пустые массивы с данными
+   " initialize empty arrays
    let g:vimprj#dRoots = {}
    let g:vimprj#dFiles = {}
    let g:vimprj#iCurFileNum = -1
@@ -224,7 +226,7 @@ function! vimprj#init()
             \     'ApplySettingsForFile' : {},
             \  }
 
-   " указываем обработчик открытия нового файла: OnFileOpen
+   " OnFileOpen handler
    augroup Vimprj_LoadFile
       autocmd! Vimprj_LoadFile BufReadPost
       autocmd! Vimprj_LoadFile BufNewFile
@@ -232,12 +234,13 @@ function! vimprj#init()
       autocmd Vimprj_LoadFile BufNewFile *  call <SID>OnFileOpen(bufnr(expand('<afile>')))
    augroup END
 
-   " указываем обработчик входа в другой буфер: OnBufEnter
+   " OnBufEnter handler
    augroup Vimprj_BufEnter
       autocmd! Vimprj_BufEnter BufEnter
       autocmd Vimprj_BufEnter BufEnter * call <SID>OnBufEnter(bufnr(expand('<afile>')))
    augroup END
 
+   " OnBufSave handler
    augroup Vimprj_BufWritePost
       autocmd! Vimprj_BufWritePost BufWritePost
       autocmd Vimprj_BufWritePost BufWritePost * call <SID>OnBufSave()
@@ -253,13 +256,11 @@ endfunction
 
 
 
-" Парсит директорию проекта (директорию, в которой лежит директория .vimprj)
-" Добавляет новый vimprj_root
+" Parse the directory folder (the directory which contains `.vimprj` dir)
 "
 " @param lProjectRoots list with paths to projs dir
-"        (this is list instead of string because we need to support nested
+"        (this is a list instead of a string because we need to support nested
 "        projs)
-
 function! <SID>ParseNewVimprjRoot(lProjectRoots)
 
    let l:sLastVimprjFolder = ""
@@ -314,7 +315,7 @@ function! <SID>CreateDefaultProjectIfNotAlready()
                \     'sVimprjDirName' : ''
                \  })
 
-      " создаем дефолтный "проект"
+      " create default "project"
       call <SID>ChangeDirToVimprj(substitute(s:sStartCwd, ' ', '\\ ', 'g'))
       call <SID>AddNewVimprjRoot("default", [], s:sStartCwd)
       "call <SID>TakeAccountOfFile(0, 'default')
@@ -416,10 +417,10 @@ function! <SID>ExecHooks(sHooksgroup, dParams)
 endfunction
 
 
-" добавляет новый vimprj root, заполняет его текущими параметрами
+" Add new vimprj root, fill it with current params
 "
-" ВНИМАНИЕ! "текущими" параметрами - это означает, что на момент вызова
-" этого метода все .vim файлы из .vimprj уже должны быть выполнены!
+" NOTE: "current params" means that when this function is called, all
+"       .vimprj/*.vim files should be sourced already!
 function! <SID>AddNewVimprjRoot(sVimprjKey, lPaths, sCdPath)
 
    if !has_key(g:vimprj#dRoots, a:sVimprjKey)
@@ -462,13 +463,13 @@ endfunction
 
 
 
-" returns if we should to skip this buffer ('skipped' buffers are not handled
-" by vimprj plugin at all)
+" returns if we should skip this buffer ('skipped' buffers are not handled by
+" vimprj plugin at all)
 function! <SID>NeedSkipBuffer(iFileNum)
 
    " COMMENTED!! file should be readable 
-   " commented because of we should parse creation of new files,
-   " which isn't readable at BufNewFile.
+   " commented because we should parse creation of new files, which isn't
+   " readable at BufNewFile.
    "
    "if !filereadable(bufname(a:iFileNum))
       "return 1
@@ -536,10 +537,10 @@ function! <SID>SourceVimprjFiles(sPath)
 endfunction
 
 function! <SID>ChangeDirToVimprj(sPath)
-   " переключаем рабочую директорию
+   " switch working dir
    if (g:vimprj_changeCurDirIfVimprjFound)
       exec "cd ".a:sPath
-      " ???? иначе не работает
+      " ???? very strange, but sometimes it doesn't work otherwise
       exec "cd ".a:sPath
    endif
 endfunction
@@ -568,7 +569,7 @@ function! <SID>GetVimprjRootOfFile(iFileNum)
             "break
 
          endif
-         
+
          " get upper path
          let l:sNextCurPath = simplify(l:sCurPath.'/..')
          if (l:sNextCurPath == l:sCurPath)
@@ -583,16 +584,15 @@ function! <SID>GetVimprjRootOfFile(iFileNum)
       if !empty(l:sProjectRoot)
 
          " .vimprj directory or file is found.
-         " проверяем, не открыли ли мы файл из директории .vimprj (или, если это
-         " файл, то не открыли ли мы этот файл)
+         "
+         " Let's check if the file in question is a file from .vimprj
+         " directory
 
          let l:sPathToDirNameForSearch = l:sProjectRoot.'/'.g:vimprj_dirNameForSearch
-         "let l:iPathToDNFSlen = strlen(l:sPathToDirNameForSearch)
-
-         "if strpart(l:sFilename, 0, l:iPathToDNFSlen) == l:sPathToDirNameForSearch " открытый файл - из директории .vimprj, так что для него
 
          if dfrank#util#IsFileInSubdir(l:sFilename, l:sPathToDirNameForSearch)
-            " НЕ будем применять настройки из этой директории.
+            " Yes, we opened a file from .vimprj dir. So, we're not going to
+            " apply settings from .vimprj dir.
             let l:sProjectRoot = ''
          endif
 
@@ -673,7 +673,7 @@ function! <SID>OnFileOpen(iFileNum)
                   \     'sVimprjDirName' : ''
                   \  })
 
-         " создаем дефолтный "проект"
+         " create default "project"
          call <SID>ChangeDirToVimprj(substitute(s:sStartCwd, ' ', '\\ ', 'g'))
          call <SID>AddNewVimprjRoot("default", [], s:sStartCwd)
          "call <SID>TakeAccountOfFile(0, 'default')
@@ -694,6 +694,8 @@ function! <SID>OnFileOpen(iFileNum)
 
 
    call <SID>SetCurrentFile(l:iFileNum)
+
+   let $VIMPRJ_PROJECT_ROOT = g:vimprj#dRoots[ l:sVimprjKey ].proj_root
 
    call <SID>ExecHooks('OnFileOpen', {
             \     'iFileNum'   : l:iFileNum,
