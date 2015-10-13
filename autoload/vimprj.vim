@@ -559,6 +559,9 @@ function! <SID>GetVimprjRootOfFile(iFileNum)
       let l:sCurPath = l:sDirname
       while (l:i < g:vimprj_recurseUpCount)
          let l:sTmp = simplify(l:sCurPath.'/'.g:vimprj_dirNameForSearch)
+         if has("win32unix")
+           let l:sTmp = substitute(l:sTmp, '//', '/', 'g')
+         endif
          if isdirectory(l:sTmp) || filereadable(l:sTmp)
 
             " directory or file with needed name found
@@ -572,6 +575,9 @@ function! <SID>GetVimprjRootOfFile(iFileNum)
 
          " get upper path
          let l:sNextCurPath = simplify(l:sCurPath.'/..')
+         if has("win32unix")
+           let l:sNextCurPath = substitute(l:sNextCurPath, '//', '/', 'g')
+         endif
          if (l:sNextCurPath == l:sCurPath)
             " we reached root of filesystem. break now
             break
